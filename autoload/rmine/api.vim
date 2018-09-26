@@ -158,7 +158,7 @@ function! s:request(method, path, data, option)
   endif
 
   " put or delete
-  if ret.content == ' '
+  if ret.content =~ '^\s*$'
     return 1
   else
     return webapi#json#decode(ret.content)
