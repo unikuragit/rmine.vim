@@ -4,11 +4,11 @@ let s:http  = s:vital.import('Web.Http')
 let s:cache = {}
 
 function! rmine#api#versions(project_id)
-  return s:get('projects/' . a:project_id . '/versions').versions
+  return s:get('projects/' . a:project_id . '/versions', {'limit' : g:rmine_limits}).versions
 endfunction
 
 function! rmine#api#projects(...)
-  return s:get('projects').projects
+  return s:get('projects', {'limit' : g:rmine_limits}).projects
 endfunction
 
 function! rmine#api#project(id)
@@ -79,33 +79,33 @@ function! rmine#api#issue_statuses()
   if !empty(statuses)
     return copy(statuses)
   endif
-  let statuses = s:get('issue_statuses').issue_statuses
+  let statuses = s:get('issue_statuses', {'limit' : g:rmine_limits}).issue_statuses
   let s:cache['issue_statuses'] = statuses
   return statuses
 endfunction
 
 function! rmine#api#issue_priorities()
-  return s:get('enumerations/issue_priorities').issue_priorities
+  return s:get('enumerations/issue_priorities', {'limit' : g:rmine_limits}).issue_priorities
 endfunction
 
 function! rmine#api#users()
-  return s:get('users').users
+  return s:get('users', {'limit' : g:rmine_limits}).users
 endfunction
 
 function! rmine#api#current_user()
-  return s:get('users/current').user
+  return s:get('users/current', {'limit' : g:rmine_limits}).user
 endfunction
 
 function! rmine#api#project_memberships(project_id)
-  return s:get('projects/' . a:project_id . '/memberships').memberships
+  return s:get('projects/' . a:project_id . '/memberships', {'limit' : g:rmine_limits}).memberships
 endfunction
 
 function! rmine#api#trackers()
-  return s:get('trackers').trackers
+  return s:get('trackers', {'limit' : g:rmine_limits}).trackers
 endfunction
 
 function! rmine#api#queries()
-  return s:get('queries').queries
+  return s:get('queries', {'limit' : g:rmine_limits}).queries
 endfunction
 
 "-------------- private -----------------
