@@ -18,13 +18,57 @@ function! s:load(issue)
   let b:rmine_cache = a:issue
 
   let header = s:create_header(a:issue)
+  let custom_fields = s:create_custom_fields(a:issue)
   let desc   = s:create_description(a:issue)
   let notes  = s:create_notes(a:issue)
 
-  call append(0, header + desc + ['', '', '<< comments >>', ''] + notes)
+  call append(0, header + custom_fields + desc + ['', '', '<< comments >>', ''] + notes)
   delete _
   call rmine#util#clear_undo()
   :0
+endfunction
+
+function! s:create_custom_fields(issue)
+  let issue = a:issue
+  if !exists('issue.custom_fields') || type(issue.custom_fields) != v:t_list
+    return []
+  endif
+
+  let title = '<<custom_fields>>'
+  let fields = [
+        \ title,
+        \ ]
+  let cf_def = rmine#util#custom_fields_cached(issue.project.id)
+  for field in issue.custom_fields
+    if has_key(cf_def, field.id)
+      if has_key(cf_def[field.id], 'possible_values')
+        let str = rmine#util#id_to_name(field.value, cf_def[field.id].possible_values)
+        call add(fields, field.name . ' : ' . str)
+      elseif cf_def[field.id].field_format == 'attachment'
+        if field.value != ''
+          let attachment = rmine#api#attachments(field.value)
+        else
+          let attachment = ''
+        endif
+        if type(attachment) == v:t_string
+          call add(fields, field.name . ' : ' )
+        else
+          call add(fields, field.name . ' : '
+              \ . attachment.content_url
+              \ )
+        endif
+      elseif cf_def[field.id].field_format == 'text'
+        call add(fields, field.name . ' : <<<')
+        call extend(fields, split(substitute(field.value, '\r\n\?', '\n', 'g'), '\n'))
+        call add(fields, '>>>')
+      else
+        call add(fields, field.name . ' : '
+              \ . (type(field.value) == v:null ? '' : field.value)
+              \ )
+      endif
+    endif
+  endfor
+  return fields
 endfunction
 
 function! s:create_header(issue)
@@ -46,8 +90,53 @@ function! s:create_header(issue)
         \ 'updated_on  : ' . rmine#util#format_date(issue.updated_on),
         \ '',
         \ ]
-  
-  return header
+
+  call extend(header, [
+      \ 'estimated_hours : ' . string(get(issue, 'estimated_hours', '')) . ' (total:' . string(get(issue, 'total_estimated_hours', '')) . ')',
+      \ 'spent_hours     : ' . string(get(issue, 'spent_hours', '')) . ' (total:' . string(get(issue, 'total_spent_hours', '')) . ')',
+      \ '',
+      \ ])
+
+  let header_atch = []
+  let attachments = get(issue, 'attachments', [])
+  if len(attachments) > 0
+    call add(header_atch, '<<attachments>>')
+    for item in attachments
+      call add(header_atch, item.content_url)
+    endfor
+    call add(header_atch, '')
+  endif
+
+  let header_child = []
+  let children = get(issue, 'children', [])
+  if len(children) > 0
+    call add(header_child, '<<children>>')
+    for item in children
+      call add(header_child, '#' . item.id . ':' . item.subject)
+    endfor
+    call add(header_child, '')
+  endif
+
+  let header_rel = []
+  let relations = get(issue, 'relations', [])
+  if len(relations) > 0
+    call add(header_rel, '<<relations>>')
+    for item in relations
+      let rel_id = issue.id != item.issue_id ? item.issue_id : item.issue_to_id
+      let rel_subject = rmine#api#simple_issue(rel_id).subject
+      let rel_delay = exists('item.delay') && item.delay != v:null ? ':' . string(item.delay) : ''
+      if item.issue_id == issue.id
+        let text = ' (' . item.relation_type . rel_delay . ')>'
+      else
+        let text = '<(' . item.relation_type . rel_delay . ') '
+      endif
+      let text = printf('%-16S', text) . '#' . string(rel_id) . ':' . rel_subject
+      call add(header_rel, text)
+    endfor
+    call add(header_rel, '')
+  endif
+
+  return extend(extend(extend(header, header_atch), header_child), header_rel)
 endfunction
 
 function! s:create_description(issue)
@@ -83,6 +172,16 @@ function! s:create_notes(issue)
   return notes
 endfunction
 
+function! s:open_relation_issue(opener)
+  let opener = a:opener
+  let no = matchstr(getline('.'), '#\zs\d\+')
+  if no == ''
+    return
+  endif
+  execute opener
+  call rmine#issue(no)
+endfunction
+
 function! s:define_default_key_mappings()
   augroup rmine_issue
     nnoremap <silent> <buffer> <leader>r :call rmine#issue(b:rmine_cache.id)<CR>
@@ -90,5 +189,6 @@ function! s:define_default_key_mappings()
     "nnoremap <silent> <buffer> <C-b> :call rmine#issue(b:rmine_cache.id + 1)<CR>
     nnoremap <silent> <buffer> <Leader>s :call rmine#buffer#note()<CR>
     nnoremap <silent> <buffer> <Leader>b :call rmine#open_browser(b:rmine_cache.id)<CR>
+    nnoremap <silent> <buffer> <CR> :call <SID>open_relation_issue('edit')<CR>
   augroup END
 endfunction

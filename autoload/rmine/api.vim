@@ -24,7 +24,7 @@ function! rmine#api#issues(project, ...)
 endfunction
 
 function! rmine#api#issue(no)
-  return s:get('issues/' . a:no, {'include' : 'journals'}).issue
+  return s:get('issues/' . a:no, {'include' : g:rmine_issue_includes}).issue
 endfunction
 "{
 "    "issue": {
@@ -55,6 +55,10 @@ endfunction
 "     'updated_on'      : '2012-11-23T14:54:00Z'
 "     }
 "   }
+function! rmine#api#simple_issue(no)
+  return s:get('issues/' . a:no).issue
+endfunction
+
 function! rmine#api#issue_post(project_id, subject, description, ...)
   let param = a:0 > 0 ? a:1 : {}
   let issue = {
@@ -108,6 +112,24 @@ function! rmine#api#queries()
   return s:get('queries', {'limit' : g:rmine_limits}).queries
 endfunction
 
+function! rmine#api#custom_fields()
+  return s:get('custom_fields').custom_fields
+endfunction
+
+function! rmine#api#attachments(id)
+  return s:get('attachments/' . a:id).attachment
+endfunction
+
+function! rmine#api#time_entry_activities()
+  return s:get('enumerations/time_entry_activities', {'limit' : g:rmine_limits}).time_entry_activities
+endfunction
+
+function! rmine#api#time_entry_activitie_update(no, param)
+  let param = a:param
+  let param.issue_id = a:no
+  return s:post('time_entries', {'time_entry' : param})
+endfunction
+
 "-------------- private -----------------
 
 function! s:get(path, ...)
@@ -154,7 +176,13 @@ function! s:request(method, path, data, option)
     let status = substitute(status, ' .*', '', '')
   endif
   if index(['200', '201'], status) < 0
-    throw ret.header[0]
+    if status =~ '^404' && exists('ret.error')
+      return ret.error
+    elseif status =~ '^4'
+      throw 'Error:' . ret.content
+    else
+      throw ret.header[0]
+    endif
   endif
 
   " put or delete

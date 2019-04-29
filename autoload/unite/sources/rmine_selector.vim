@@ -18,11 +18,17 @@ let s:selector_map = {
       \ 'assigned_to' : 'users',
       \ 'status'      : 'issue_statuses',
       \ 'priority'    : 'issue_priorities',
+      \ 'activity'    : 'time_entry_activities',
       \ }
 
 function! unite#sources#rmine_selector#start()
   " get line and judge selector
   let line = getline('.')
+  let cfield = matchlist(line, '^c_\(\d\+\)_\(\w\{-\}\)_')
+  if len(cfield) > 0
+    return unite#sources#rmine_multi_selector#start(line, cfield[1], cfield[2])
+  endif
+
   let pair = split(line, '\s\{0,}:\s\{0,}')
   " check line
   if len(pair) == 0
