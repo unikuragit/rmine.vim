@@ -36,6 +36,7 @@ endfunction
 function! s:append_custom_fields(fields, aline)
   let buflines = []
   let cf_def = rmine#util#custom_fields_cached(b:rmine_cache.project.id)
+  if len(cf_def) == 0 | return | endif
   for field in a:fields
     if cf_def[field.id].field_format !~ 'attachment'
       let label = 'c_' . field.id . '_' . cf_def[field.id].field_format . '_' . field.name

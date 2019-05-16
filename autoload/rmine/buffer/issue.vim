@@ -66,6 +66,10 @@ function! s:create_custom_fields(issue)
               \ . (type(field.value) == v:null ? '' : field.value)
               \ )
       endif
+    else
+      call add(fields, field.name . ' : '
+            \ . (type(field.value) == v:null ? '' : field.value)
+            \ )
     endif
   endfor
   return fields

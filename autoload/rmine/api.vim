@@ -113,7 +113,12 @@ function! rmine#api#queries()
 endfunction
 
 function! rmine#api#custom_fields()
-  return s:get('custom_fields').custom_fields
+  try
+    return s:get('custom_fields').custom_fields
+  catch /^Forbidden/
+    echo 'Permission denied : custom_fields'
+    return []
+  endtry
 endfunction
 
 function! rmine#api#attachments(id)
@@ -178,6 +183,8 @@ function! s:request(method, path, data, option)
   if index(['200', '201'], status) < 0
     if status =~ '^404' && exists('ret.error')
       return ret.error
+    elseif status =~ '^403'
+      throw ret.message . ' ' . ret.content
     elseif status =~ '^4'
       throw 'Error:' . ret.content
     else
