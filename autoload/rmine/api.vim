@@ -11,6 +11,11 @@ function! rmine#api#projects(...)
   return s:get('projects', {'limit' : g:rmine_limits}).projects
 endfunction
 
+function! rmine#api#projects_all(...)
+  let param = a:0 > 0 ? a:1 : {'limit' : g:rmine_limits}
+  return s:get_all('projects', param, 'projects')
+endfunction
+
 function! rmine#api#project(id)
   return s:get('projects/' . a:id).project
 endfunction
@@ -21,6 +26,17 @@ function! rmine#api#issues(project, ...)
   let param = a:0 > 0 ? a:1 : {}
   let path  = a:project == 'all' ? 'issues' : 'projects/' . a:project . '/issues'
   return s:get(path, param).issues
+endfunction
+
+function! rmine#api#issues_all(project, ...)
+  let param = a:0 > 0 ? a:1 : {}
+  let path  = a:project == 'all' ? 'issues' : 'projects/' . a:project . '/issues'
+  let result = s:get(path, param)
+  if a:project == 'all'
+    return s:get(path, param).issues
+  else
+    return s:get_all(path, param, 'issues')
+  endif
 endfunction
 
 function! rmine#api#issue(no)
@@ -199,3 +215,24 @@ function! s:request(method, path, data, option)
     return webapi#json#decode(ret.content)
   endif
 endfunction
+
+function! s:get_all(path, param, extendkey)
+  let path = a:path
+  let param = a:param
+  let result = s:get(path, param)
+  let exlist = deepcopy(result[a:extendkey])
+  let cnt = len(exlist)
+  let offset = 0
+  let limit = result.limit
+  let total_count = result.total_count
+  while 1
+    if total_count <= cnt | break | endif
+    let param.offset = cnt
+    let param.limit = limit
+    let result = s:get(path, param)
+    call extend(exlist, result[a:extendkey])
+    let cnt = len(exlist)
+  endwhile
+  return exlist
+endfunction
+
