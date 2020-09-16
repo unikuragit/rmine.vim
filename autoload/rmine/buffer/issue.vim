@@ -145,8 +145,9 @@ endfunction
 
 function! s:create_description(issue)
   let issue = a:issue
+  let description = get(issue, 'description', '')
   let desc = []
-  for line in split(issue.description,"\n")
+  for line in split(description,"\n")
     let line = substitute(line , '' , '' , 'g')
     if line !~ "^h2\."
       let line = '  ' . line
