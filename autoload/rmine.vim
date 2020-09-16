@@ -9,6 +9,15 @@ function! rmine#issues(project, ...)
   call rmine#buffer#load(a:project, issues)
 endfunction
 
+function! rmine#issues_all(project) abort
+  let param = {}
+  if !has_key(param, 'limit')
+    let param.limit = 100
+  endif
+  let issues = rmine#api#issues_all(a:project, param)
+  call rmine#buffer#load(a:project, issues)
+endfunction
+
 function! rmine#issues_command(...)
   let project = a:0 > 0 ? a:1 : 'all'
   call rmine#issues(project)
