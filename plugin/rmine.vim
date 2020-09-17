@@ -12,6 +12,8 @@ endif
 "     children
 let g:rmine_issue_includes = get(g:, 'rmine_issue_includes', 'journals')
 
+let g:rmine_selector_items = get(g:, 'rmine_selector_items', {})
+
 command! -nargs=? -complete=custom,rmine#complete#project Rmine :call rmine#issues_command(<f-args>)
 
 command! -nargs=? -complete=custom,rmine#complete#project RmineAll :call rmine#issues_all(<f-args>)

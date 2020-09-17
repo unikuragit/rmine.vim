@@ -34,18 +34,23 @@ function! unite#sources#rmine_selector#start()
   if len(pair) == 0
     return
   endif
+
   " check api
   let selector = pair[0]
-  if !has_key(s:selector_map, selector)
-    return
+  if len(get(g:rmine_selector_items, selector, [])) > 0
+    let list = g:rmine_selector_items[selector]
+  else
+    if !has_key(s:selector_map, selector)
+      return
+    endif
+    try
+      let list = eval("rmine#api#" . s:selector_map[selector] . "()")
+    catch
+      echohl Error | echo 'not supported' | echohl None
+      return
+    endtry
   endif
-  try
-    let list = eval("rmine#api#" . s:selector_map[selector] . "()")
-  catch
-    echohl Error | echo 'not supported' | echohl None
-    return
-  endtry
-  "
+
   for v in list
     if selector == 'assigned_to'
       let v.name     = v.firstname . ' ' . v.lastname

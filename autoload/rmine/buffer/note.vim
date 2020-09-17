@@ -36,24 +36,30 @@ endfunction
 function! s:append_custom_fields(fields, aline)
   let buflines = []
   let cf_def = rmine#util#custom_fields_cached(b:rmine_cache.project.id)
-  if len(cf_def) == 0 | return | endif
-  for field in a:fields
-    if cf_def[field.id].field_format !~ 'attachment'
-      let label = 'c_' . field.id . '_' . cf_def[field.id].field_format . '_' . field.name
-      if has_key(cf_def[field.id], 'possible_values')
-        let str = rmine#util#id_to_name(field.value, cf_def[field.id].possible_values)
-        call add(buflines, label . ' |:| ' . str)
-      else
-        if cf_def[field.id].field_format == 'text'
-          call add(buflines, label . ' |:| <<<')
-          call extend(buflines, split(substitute(field.value, '\r\n\?', '\n', 'g'), '\n'))
-          call add(buflines, label . ' |:| >>>')
+  if len(cf_def) > 0
+    for field in a:fields
+      if cf_def[field.id].field_format !~ 'attachment'
+        let label = 'c_' . field.id . '_' . cf_def[field.id].field_format . '_' . field.name
+        if has_key(cf_def[field.id], 'possible_values')
+          let str = rmine#util#id_to_name(field.value, cf_def[field.id].possible_values)
+          call add(buflines, label . ' |:| ' . str)
         else
-          call add(buflines, label . ' |:| ' . (type(field.value) == v:null ? '' : field.value))
+          if cf_def[field.id].field_format == 'text'
+            call add(buflines, label . ' |:| <<<')
+            call extend(buflines, split(substitute(field.value, '\r\n\?', '\n', 'g'), '\n'))
+            call add(buflines, label . ' |:| >>>')
+          else
+            call add(buflines, label . ' |:| ' . (type(field.value) == v:null ? '' : field.value))
+          endif
         endif
       endif
-    endif
-  endfor
+    endfor
+  else
+    for field in a:fields
+      let label = 'c_' . field.id . '_NOFMT_' . field.name
+      call add(buflines, label . ' |:| ' . field.value)
+    endfor
+  endif
   call append(a:aline, buflines)
 endfunction
 
@@ -78,79 +84,81 @@ function! s:post_note()
   let time_entry = {}
   while 1
     let line = getline('.')
-    if line =~ '^c_\d\+_\w\{-\}_.*|:|'
-      " custom_field
-      let matches = matchlist(line,  '^c_\zs\(\d\+\)\ze_\zs\(\w\{-\}\)\ze_.*|:|\zs\(.\+\)\ze$')
-      if len(matches) > 3
-        let modified = 0
-        let updateval = ''
-        let cid = matches[1]
-        let cformat = matches[2]
-        let cval = trim(matches[3])
+    if line !~ '^#'
+      if line =~ '^c_\d\+_\w\{-\}_.*|:|'
+        " custom_field
+        let matches = matchlist(line,  '^c_\zs\(\d\+\)\ze_\zs\(\w\{-\}\)\ze_.*|:|\zs\(.\+\)\ze$')
+        if len(matches) > 3
+          let modified = 0
+          let updateval = ''
+          let cid = matches[1]
+          let cformat = matches[2]
+          let cval = trim(matches[3])
 
-        if cval == 'null'
-          let updateval = cval
-          let modified = 1
-        else
-          for item in b:rmine_cache.custom_fields
-            if item.id == cid
-              let multiple = exists('item.multiple') ? item.multiple : v:false
-              if cformat =~ 'list\|bool\|enumeration\|version'
-                if exists('b:rmine_c_{cid}')
-                  let updateval = multiple ? split(b:rmine_c_{cid}) : b:rmine_c_{cid}
-                  let modified = 1
-                endif
-              elseif cformat == 'text'
-                let updateval = []
-                while 1
-                  execute "normal! \<Down>"
-                  if line('.') == line('$')
-                    break
-                  endif
-                  let line = getline('.')
-                  let matches = matchlist(line,  '^c_\zs\(\d\+\)\ze_\zs\(\w\{-\}\)\ze_.*|:|\zs\(.\+\)\ze$')
-                  if len(matches) > 3 && cid == matches[1]
-                    break
-                  else
-                    call add(updateval, line)
-                  endif
-                endwhile
-                let cval = join(updateval,  "\r\n")
-                if item.value != cval
-                  let updateval = cval
-                  let modified = 1
-                endif
-              else
-                if item.value != cval
-                  let updateval = cval
-                  let modified = 1
-                endif
-              endif
-              break
-            endif
-          endfor
-        endif
-        if modified
-          if !exists('issue.custom_fields')
-            let issue.custom_fields = []
-          endif
-          call add(issue.custom_fields, {"id" : cid, "value" : updateval})
-        endif
-      endif
-    else
-      let pair = split(line, '\s\{0,}:\s\{0,}')
-      if len(pair) > 1
-        let converted_key   = s:convert_key(pair[0])
-        let converted_value = s:convert_value(converted_key, pair[1])
-        if index(s:spent_fields, pair[0]) > -1
-          let time_entry[converted_key] = converted_value
-        else
-          if !has_key(b:rmine_cache, pair[0])
-              let issue[converted_key] = converted_value
+          if cval == 'null'
+            let updateval = cval
+            let modified = 1
           else
-            let target = type(b:rmine_cache[pair[0]]) == 4 ? b:rmine_cache[pair[0]].id : b:rmine_cache[pair[0]]
-            if target != converted_value
-              let issue[converted_key] = converted_value
+            for item in b:rmine_cache.custom_fields
+              if item.id == cid
+                let multiple = exists('item.multiple') ? item.multiple : v:false
+                if cformat =~ 'list\|bool\|enumeration\|version'
+                  if exists('b:rmine_c_{cid}')
+                    let updateval = multiple ? split(b:rmine_c_{cid}) : b:rmine_c_{cid}
+                    let modified = 1
+                  endif
+                elseif cformat == 'text'
+                  let updateval = []
+                  while 1
+                    execute "normal! \<Down>"
+                    if line('.') == line('$')
+                      break
+                    endif
+                    let line = getline('.')
+                    let matches = matchlist(line,  '^c_\zs\(\d\+\)\ze_\zs\(\w\{-\}\)\ze_.*|:|\zs\(.\+\)\ze$')
+                    if len(matches) > 3 && cid == matches[1]
+                      break
+                    else
+                      call add(updateval, line)
+                    endif
+                  endwhile
+                  let cval = join(updateval,  "\r\n")
+                  if item.value != cval
+                    let updateval = cval
+                    let modified = 1
+                  endif
+                else
+                  if item.value != cval
+                    let updateval = cval
+                    let modified = 1
+                  endif
+                endif
+                break
+              endif
+            endfor
+          endif
+          if modified
+            if !exists('issue.custom_fields')
+              let issue.custom_fields = []
+            endif
+            call add(issue.custom_fields, {"id" : cid, "value" : updateval})
+          endif
+        endif
+      else
+        let pair = split(line, '\s\{0,}:\s\{0,}')
+        if len(pair) > 1
+          let converted_key   = s:convert_key(pair[0])
+          let converted_value = s:convert_value(converted_key, pair[1])
+          if index(s:spent_fields, pair[0]) > -1
+            let time_entry[converted_key] = converted_value
+          else
+            if !has_key(b:rmine_cache, pair[0])
+                let issue[converted_key] = converted_value
+            else
+              let target = type(b:rmine_cache[pair[0]]) == 4 ? b:rmine_cache[pair[0]].id : b:rmine_cache[pair[0]]
+              if target != converted_value
+                let issue[converted_key] = converted_value
+              endif
             endif
           endif
         endif

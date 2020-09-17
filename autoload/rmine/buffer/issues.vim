@@ -79,6 +79,9 @@ function! s:format(issue)
           \ rmine#util#ljust(get(a:issue, 'due_date',''), 12) . ' ' . 
           \ a:issue.subject . ' ' . 
           \ '[[' . rmine#util#format_date(a:issue.updated_on) . ']]'
+  if exists('a:issue.parent.id')
+    let buf .= printf('  PID #%s', a:issue.parent.id)
+  endif
   return buf
 endfunction
 
