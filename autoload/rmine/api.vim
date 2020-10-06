@@ -25,12 +25,6 @@ endfunction
 function! rmine#api#issues(project, ...)
   let param = a:0 > 0 ? a:1 : {}
   let path  = a:project == 'all' ? 'issues' : 'projects/' . a:project . '/issues'
-  return s:get(path, param).issues
-endfunction
-
-function! rmine#api#issues_all(project, ...)
-  let param = a:0 > 0 ? a:1 : {}
-  let path  = a:project == 'all' ? 'issues' : 'projects/' . a:project . '/issues'
   let result = s:get(path, param)
   if a:project == 'all'
     return s:get(path, param).issues
