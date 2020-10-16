@@ -161,6 +161,18 @@ function! s:post_note()
               endif
             endif
           endif
+        elseif len(pair) > 0
+          let converted_key   = s:convert_key(pair[0])
+          if index(s:spent_fields, pair[0]) == -1
+            if !has_key(b:rmine_cache, pair[0])
+                let issue[converted_key] = ''
+            else
+              let target = type(b:rmine_cache[pair[0]]) == 4 ? b:rmine_cache[pair[0]].id : b:rmine_cache[pair[0]]
+              if target != ''
+                let issue[converted_key] = ''
+              endif
+            endif
+          endif
         endif
       endif
     endif
