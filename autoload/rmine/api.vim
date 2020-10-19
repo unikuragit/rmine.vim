@@ -194,7 +194,7 @@ function! s:request(method, path, data, option)
     let status = substitute(ret.header[0], 'HTTP/1.\d ', '', '')
     let status = substitute(status, ' .*', '', '')
   endif
-  if index(['200', '201'], status) < 0
+  if index(['200', '201', '204'], status) < 0
     if status =~ '^404' && exists('ret.error')
       return ret.error
     elseif status =~ '^403'
@@ -202,7 +202,8 @@ function! s:request(method, path, data, option)
     elseif status =~ '^4'
       throw 'Error:' . ret.content
     else
-      throw ret.header[0]
+      throw string(ret)
+      "throw ret.header[0]
     endif
   endif
 
@@ -216,7 +217,19 @@ endfunction
 
 function! s:request_fileupload(filename, filepath)
   let cmd = printf('curl -s -X POST -H "Content-Type: application/octet-stream" -H "Expect:" -H "X-Redmine-API-Key: %s" -d @"%s" %s/uploads.json?filename=%s', g:rmine_access_key, a:filepath, rmine#server_url(), webapi#http#encodeURI(a:filename))
-  return eval(system(cmd))
+  let ret = eval(system(cmd))
+  if exists('ret.errors')
+    if type(ret.errors) == v:t_list
+      throw join(ret.errors, "\n")
+    elseif type(ret.errors) == v:t_dict
+      throw string(ret.errors)
+    else
+      throw ret.errors
+    endif
+  elseif !exists('ret.upload.token')
+    throw 'Invalid response ' . string(ret)
+  endif
+  return ret
 endfunction
 
 function! s:get_all(path, param, extendkey)

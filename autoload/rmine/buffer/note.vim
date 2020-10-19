@@ -149,15 +149,16 @@ function! s:post_note()
         let pair = split(line, '\s\{0,}:\s\{0,}')
         if len(pair) > 1
           if pair[0] =~ '^upload_'
-            let fname = matchstr(pair[0], '^upload_\zs.\+')
+            let fpath = join(pair[1:], ':')
+            let fname = matchstr(pair[0], '^upload_\zs')
             if fname == ''
-              let fname = fnamemodify(pair[1], ':t')
+              let fname = fnamemodify(fpath, ':t')
             endif
             call add(upload_files,
               \ {
               \   "filename": fname,
-              \   "filepath": pair[1],
-              \   "mimetype": s:convert_mime_type(pair[1]),
+              \   "filepath": fpath,
+              \   "mimetype": s:convert_mime_type(fpath),
               \ }
               \ )
           else
@@ -202,21 +203,17 @@ function! s:post_note()
   try
     for item in upload_files
       let ret = rmine#api#fileupload(item.filename, item.filepath)
-      echomsg string(ret)
-      if exists('ret.upload.token')
-        if !exists('issue.uploads')
-          let issue.uploads = []
-        endif
-        call add(issue.uploads,
-          \ {
-          \   "token":        ret.upload.token,
-          \   "filename":     item.filename,
-          \   "content_type": item.mimetype
-          \ })
+      if !exists('issue.uploads')
+        let issue.uploads = []
       endif
+      call add(issue.uploads,
+        \ {
+        \   "token":        ret.upload.token,
+        \   "filename":     item.filename,
+        \   "content_type": item.mimetype
+        \ })
     endfor
 
-    echomsg string(issue)
     let ret  = rmine#api#issue_update(b:rmine_cache.id, issue)
     if len(time_entry) > 0
       let ret = rmine#api#time_entry_activitie_update(b:rmine_cache.id, time_entry)
