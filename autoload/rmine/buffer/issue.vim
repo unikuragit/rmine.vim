@@ -106,7 +106,13 @@ function! s:create_header(issue)
   if len(attachments) > 0
     call add(header_atch, '<<attachments>>')
     for item in attachments
-      call add(header_atch, item.content_url)
+      let author = exists('item.author.name') ? item.author.name : ''
+      let filename = exists('item.filename') ? item.filename : ''
+      let size = exists('item.filesize') ? item.filesize : ''
+      let create = exists('item.created_on') ? item.created_on : ''
+      let url = exists('item.content_url') ? item.content_url : ''
+      let detail = printf('%s(%s) : %s   %s(%s)', filename, size, url, author, create)
+      call add(header_atch, detail)
     endfor
     call add(header_atch, '')
   endif
@@ -162,15 +168,34 @@ function! s:create_notes(issue)
   let issue = a:issue
   let notes = []
   for jnl in issue.journals
-    if !has_key(jnl, 'notes') || jnl.notes == ''
-      continue
-    endif
+    "if !has_key(jnl, 'notes') || jnl.notes == ''
+    "  continue
+    "endif
     let name = jnl.user.name . ' - ' . jnl.created_on
     call add(notes, name)
     call add(notes, rmine#util#ljust('~', strwidth(name), '~'))
     for line in split(jnl.notes,"\n")
       call add(notes , '  ' . substitute(line , '' , '' , 'g'))
     endfor
+
+    for dtl in jnl.details
+      let detail = ''
+      if exists('dtl.old_value')
+        if exists('dtl.new_value')
+          let detail = printf('  %s_%s : %s to %s', dtl.property, dtl.name, dtl.old_value, dtl.new_value)
+        else
+          let detail = printf('  %s_%s : Removed %s', dtl.property, dtl.name, dtl.old_value)
+        endif
+      else
+        if exists('dtl.new_value')
+          let detail = printf('  %s_%s : Added %s', dtl.property, dtl.name, dtl.new_value)
+        endif
+      endif
+      if detail != ''
+        call add(notes, detail)
+      endif
+    endfor
+
     call add(notes, '')
   endfor
 
