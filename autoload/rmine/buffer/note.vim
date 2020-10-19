@@ -82,6 +82,7 @@ function! s:post_note()
   " extract changed field
   let issue = {}
   let time_entry = {}
+  let upload_files =[]
   while 1
     let line = getline('.')
     if line !~ '^#'
@@ -147,17 +148,31 @@ function! s:post_note()
       else
         let pair = split(line, '\s\{0,}:\s\{0,}')
         if len(pair) > 1
-          let converted_key   = s:convert_key(pair[0])
-          let converted_value = s:convert_value(converted_key, pair[1])
-          if index(s:spent_fields, pair[0]) > -1
-            let time_entry[converted_key] = converted_value
+          if pair[0] =~ '^upload_'
+            let fname = matchstr(pair[0], '^upload_\zs.\+')
+            if fname == ''
+              let fname = fnamemodify(pair[1], ':t')
+            endif
+            call add(upload_files,
+              \ {
+              \   "filename": fname,
+              \   "filepath": pair[1],
+              \   "mimetype": s:convert_mime_type(pair[1]),
+              \ }
+              \ )
           else
-            if !has_key(b:rmine_cache, pair[0])
-                let issue[converted_key] = converted_value
+            let converted_key   = s:convert_key(pair[0])
+            let converted_value = s:convert_value(converted_key, pair[1])
+            if index(s:spent_fields, pair[0]) > -1
+              let time_entry[converted_key] = converted_value
             else
-              let target = type(b:rmine_cache[pair[0]]) == 4 ? b:rmine_cache[pair[0]].id : b:rmine_cache[pair[0]]
-              if target != converted_value
-                let issue[converted_key] = converted_value
+              if !has_key(b:rmine_cache, pair[0])
+                  let issue[converted_key] = converted_value
+              else
+                let target = type(b:rmine_cache[pair[0]]) == 4 ? b:rmine_cache[pair[0]].id : b:rmine_cache[pair[0]]
+                if target != converted_value
+                  let issue[converted_key] = converted_value
+                endif
               endif
             endif
           endif
@@ -185,6 +200,23 @@ function! s:post_note()
   let issue.notes = join(getline('.', '$') , "\n")
 
   try
+    for item in upload_files
+      let ret = rmine#api#fileupload(item.filename, item.filepath)
+      echomsg string(ret)
+      if exists('ret.upload.token')
+        if !exists('issue.uploads')
+          let issue.uploads = []
+        endif
+        call add(issue.uploads,
+          \ {
+          \   "token":        ret.upload.token,
+          \   "filename":     item.filename,
+          \   "content_type": item.mimetype
+          \ })
+      endif
+    endfor
+
+    echomsg string(issue)
     let ret  = rmine#api#issue_update(b:rmine_cache.id, issue)
     if len(time_entry) > 0
       let ret = rmine#api#time_entry_activitie_update(b:rmine_cache.id, time_entry)
@@ -237,11 +269,38 @@ let s:spent_fields = [
       \ 'activity',
       \ ]
 
+let s:convert_mime = {
+      \ 'png'     : 'image/png',
+      \ 'jpg'     : 'image/jpg',
+      \ 'jpeg'    : 'image/jpg',
+      \ 'gif'     : 'image/gif',
+      \ 'bmp'     : 'image/bmp',
+      \ 'xls'     : 'application/vnd.ms-excel',
+      \ 'xlsx'    : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      \ 'pdf'     : 'application/pdf',
+      \ 'rtf'     : 'application/rtf',
+      \ 'doc'     : 'application/msword',
+      \ 'docx'    : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      \ 'ppt'     : 'application/vnd.ms-powerpoint',
+      \ 'pptx'    : 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      \ 'zip'     : 'application/zip',
+      \ 'tar'     : 'application/x-tar',
+      \ 'txt'     : 'text/plain',
+      \ }
+
 function! s:convert_key(key)
   if has_key(s:convert_map, a:key)
     return s:convert_map[a:key]
   endif
   return a:key
+endfunction
+
+function! s:convert_mime_type(key)
+  let ext = fnamemodify(a:key, ':e')
+  if has_key(s:convert_mime, ext)
+    return s:convert_mime[ext]
+  endif
+  return 'text/plain'
 endfunction
 
 function! s:convert_value(key, value)

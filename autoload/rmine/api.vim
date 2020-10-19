@@ -84,6 +84,10 @@ function! rmine#api#issue_update(no, param)
   return s:put('issues/' . a:no, {'issue' : a:param})
 endfunction
 
+function! rmine#api#fileupload(filename, filepath)
+  return s:request_fileupload(a:filename, a:filepath)
+endfunction
+
 function! rmine#api#issue_delete(no)
   return s:delete('issues/' . a:no)
 endfunction
@@ -208,6 +212,11 @@ function! s:request(method, path, data, option)
   else
     return webapi#json#decode(ret.content)
   endif
+endfunction
+
+function! s:request_fileupload(filename, filepath)
+  let cmd = printf('curl -s -X POST -H "Content-Type: application/octet-stream" -H "Expect:" -H "X-Redmine-API-Key: %s" -d @"%s" %s/uploads.json?filename=%s', g:rmine_access_key, a:filepath, rmine#server_url(), webapi#http#encodeURI(a:filename))
+  return eval(system(cmd))
 endfunction
 
 function! s:get_all(path, param, extendkey)
