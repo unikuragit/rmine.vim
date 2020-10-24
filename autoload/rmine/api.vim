@@ -4,7 +4,7 @@ let s:http  = s:vital.import('Web.Http')
 let s:cache = {}
 
 function! rmine#api#versions(project_id)
-  return s:get('projects/' . a:project_id . '/versions', {'limit' : g:rmine_limits}).versions
+  return s:get_all('projects/' . a:project_id . '/versions', {'limit' : g:rmine_limits}, 'versions')
 endfunction
 
 function! rmine#api#projects(...)
@@ -239,7 +239,7 @@ function! s:get_all(path, param, extendkey)
   let exlist = deepcopy(result[a:extendkey])
   let cnt = len(exlist)
   let offset = 0
-  let limit = result.limit
+  let limit = exists('result.limit') ? result.limit : g:rmine_limits
   let total_count = result.total_count
   while 1
     if total_count <= cnt | break | endif

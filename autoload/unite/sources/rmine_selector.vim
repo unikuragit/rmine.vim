@@ -13,12 +13,23 @@ let s:source = {
       \ }
 
 let s:selector_map = {
-      \ 'project'     : 'projects',
-      \ 'tracker'     : 'trackers',
-      \ 'assigned_to' : 'users',
-      \ 'status'      : 'issue_statuses',
-      \ 'priority'    : 'issue_priorities',
-      \ 'activity'    : 'time_entry_activities',
+      \ 'project'       : 'projects',
+      \ 'tracker'       : 'trackers',
+      \ 'assigned_to'   : 'users',
+      \ 'status'        : 'issue_statuses',
+      \ 'priority'      : 'issue_priorities',
+      \ 'activity'      : 'time_entry_activities',
+      \ 'fixed_version' : 'versions',
+      \ }
+
+let s:selector_args = {
+      \ 'project'       : '',
+      \ 'tracker'       : '',
+      \ 'assigned_to'   : '',
+      \ 'status'        : '',
+      \ 'priority'      : '',
+      \ 'activity'      : '',
+      \ 'fixed_version' : 'b:rmine_cache.project.id',
       \ }
 
 function! unite#sources#rmine_selector#start()
@@ -44,7 +55,7 @@ function! unite#sources#rmine_selector#start()
       return
     endif
     try
-      let list = eval("rmine#api#" . s:selector_map[selector] . "()")
+      let list = eval("rmine#api#" . s:selector_map[selector] . printf("(%s)", s:selector_args[selector]))
     catch
       echohl Error | echo 'not supported' | echohl None
       return

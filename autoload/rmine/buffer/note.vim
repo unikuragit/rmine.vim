@@ -15,15 +15,16 @@ function! s:append_expalin()
   call append(0, msg)
   call append(1, rmine#util#ljust('', strwidth(msg), '-'))
   call append(2, [
-        \ 'assigned_to : ' . (has_key(b:rmine_cache, 'assigned_to') ? b:rmine_cache.assigned_to.id . ' # ' . b:rmine_cache.assigned_to.name : ''),
-        \ 'status      : ' . b:rmine_cache.status.id      . ' # ' . b:rmine_cache.status.name,
-        \ 'tracker     : ' . b:rmine_cache.tracker.id     . ' # ' . b:rmine_cache.tracker.name ,
-        \ 'priority    : ' . b:rmine_cache.priority.id    . ' # ' . b:rmine_cache.priority.name,
-        \ 'start_date  : ' . (has_key(b:rmine_cache, 'start_date') ? b:rmine_cache.start_date : ''),
-        \ 'due_date    : ' . (has_key(b:rmine_cache, 'due_date')   ? b:rmine_cache.due_date   : ''),
-        \ 'done_ratio  : ' . (has_key(b:rmine_cache, 'done_ratio') ? b:rmine_cache.done_ratio : ''),
-        \ 'hours       : ',
-        \ 'activity    : ',
+        \ 'assigned_to   : ' . (has_key(b:rmine_cache, 'assigned_to') ? b:rmine_cache.assigned_to.id . ' # ' . b:rmine_cache.assigned_to.name : ''),
+        \ 'status        : ' . b:rmine_cache.status.id      . ' # ' . b:rmine_cache.status.name,
+        \ 'tracker       : ' . b:rmine_cache.tracker.id     . ' # ' . b:rmine_cache.tracker.name ,
+        \ 'priority      : ' . b:rmine_cache.priority.id    . ' # ' . b:rmine_cache.priority.name,
+        \ 'fixed_version : ' . (has_key(b:rmine_cache, 'fixed_version') ? b:rmine_cache.fixed_version.id . ' # ' . b:rmine_cache.fixed_version.name : ''),
+        \ 'start_date    : ' . (has_key(b:rmine_cache, 'start_date') ? b:rmine_cache.start_date : ''),
+        \ 'due_date      : ' . (has_key(b:rmine_cache, 'due_date')   ? b:rmine_cache.due_date   : ''),
+        \ 'done_ratio    : ' . (has_key(b:rmine_cache, 'done_ratio') ? b:rmine_cache.done_ratio : ''),
+        \ 'hours         : ',
+        \ 'activity      : ',
         \ ])
 
   if exists('b:rmine_cache.custom_fields') && type(b:rmine_cache.custom_fields) == v:t_list
@@ -251,12 +252,13 @@ endfunction
 " ↓ copy & paste
 
 let s:convert_map = {
-      \ 'project'     : 'project_id',
-      \ 'assigned_to' : 'assigned_to_id',
-      \ 'status'      : 'status_id',
-      \ 'tracker'     : 'tracker_id',
-      \ 'priority'    : 'priority_id',
-      \ 'activity'    : 'activity_id',
+      \ 'project'       : 'project_id',
+      \ 'assigned_to'   : 'assigned_to_id',
+      \ 'status'        : 'status_id',
+      \ 'tracker'       : 'tracker_id',
+      \ 'priority'      : 'priority_id',
+      \ 'activity'      : 'activity_id',
+      \ 'fixed_version' : 'fixed_version_id',
       \ }
 
 let s:spent_fields = [
